@@ -1,5 +1,5 @@
 ﻿<p align="center">
-<img src="https://github.com/AnemonOFF/BMLogger/logo.png?raw=true" alt="BMLogger">
+<img src="https://raw.githubusercontent.com/AnemonOFF/BMLogger/main/logo.png" alt="BMLogger">
 <h1 align="center">BMLogger</h1>
 </p>
 <p align="center">
