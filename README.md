@@ -63,4 +63,4 @@ File operations are **thread-safe** by lock constructions.
 **BUT!** When you use async methods be careful with third party console output, because colored message can not be in time to reset console color scheme to default.
 
 ## License
-[License](https://github.com/AnemonOFF/BMLogger/LICENSE)
+[License](https://github.com/AnemonOFF/BMLogger/blob/main/LICENSE)
