@@ -16,10 +16,12 @@ A simple C# file and console **logger** with log level separate.
 ```c#
 var provider = new BMLoggerProvider();
 ```
-| Agrument     | type   | required | default  | description               |
-|--------------|--------|----------|----------|---------------------------|
-| dir          | string | -        | bmlogger | path to directory of logs |
-| logInConsole | bool   | -        | true     | flag to log in console    |
+| Agrument        | type     | required | default  | description                                      |
+|-----------------|----------|----------|----------|--------------------------------------------------|
+| dir             | string   | -        | bmlogger | path to directory of logs                        |
+| expiration      | TimeSpan | -        | 30 days  | time from last log in file. If greater - delete  |
+| maxFileSizeInMb | int      | -        | 20 Mb    | max file size on provider init. If greater - cut |
+| logInConsole    | bool     | -        | true     | flag to log in console                           |
  2.  Create logger by provider. **DO NOT** create it by yourself (using new BMLogger().
  
 ```c#

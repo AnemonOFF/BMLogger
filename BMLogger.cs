@@ -14,25 +14,31 @@ public enum LogLevel
 
 public class BMLogger : IDisposable
 {
+    private readonly string _dir;
+    private readonly string _name;
+    private readonly int _maxFileSizeInMb;
     private readonly bool _logDateTime;
     private readonly bool _logCallerPath;
     private readonly bool _logCallerMember;
     private readonly bool _logInConsole;
     private readonly StreamWriter _stream;
-    private object _lock = new object();
+    private readonly object _lock = new();
 
-    public string Name { get; }
+    public string Name { get { return _name; } }
 
     public BMLogger(
         string name,
         string dir,
+        int maxFileSizeInMb = 5,
         bool logInConsole = true,
         bool logDateTime = true,
         bool logCallerPath = true,
         bool logCallerMember = true
         )
     {
-        Name = name;
+        _name = name;
+        _dir = dir;
+        _maxFileSizeInMb = maxFileSizeInMb;
         _logDateTime = logDateTime;
         _logCallerPath = logCallerPath;
         _logCallerMember = logCallerMember;
@@ -42,8 +48,7 @@ public class BMLogger : IDisposable
 
     ~BMLogger()
     {
-        if (_stream != null)
-            _stream.Close();
+        Dispose();
     }
 
     public void Log(string message, LogLevel logLevel = LogLevel.INFO, [CallerFilePath] string callerPath = "", [CallerMemberName] string callerMember = "", [CallerLineNumber] int callerLine = 0)
@@ -74,7 +79,6 @@ public class BMLogger : IDisposable
                     );
             }
             _stream.WriteLine(resultMessage);
-            _stream.Flush();
         }
     }
 
@@ -125,7 +129,10 @@ public class BMLogger : IDisposable
     private static StreamWriter GetStream(string name, string dir)
     {
         var path = Path.Combine(dir, name + ".log");
-        var stream = new StreamWriter(path, true);
+        var stream = new StreamWriter(path, true)
+        {
+            AutoFlush = true
+        };
         return stream;
     }
 
@@ -133,6 +140,26 @@ public class BMLogger : IDisposable
     {
         if(_stream != null)
             _stream.Close();
+        var fileInfo = new FileInfo(Path.Combine(_dir, _name + ".log"));
+        var maxSize = _maxFileSizeInMb * 1000000;
+        if (fileInfo.Exists && fileInfo.Length > maxSize)
+        {
+            var newSize = fileInfo.Length;
+            using var writer = new StreamWriter(fileInfo.FullName);
+            using var reader = new StreamReader(fileInfo.FullName);
+            string? line;
+            do
+            {
+                line = reader.ReadLine();
+                if (newSize > maxSize && line != null)
+                {
+                    newSize -= line.Length;
+                    continue;
+                }
+                if (!reader.EndOfStream)
+                    writer.WriteLine(line);
+            } while (line != null);
+        }
         GC.SuppressFinalize(this);
     }
 }
