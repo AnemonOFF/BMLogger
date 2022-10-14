@@ -4,7 +4,7 @@
 </p>
 <p align="center">
 <a href="https://www.nuget.org/packages/BMLogger/"><img alt="Nuget" src="https://img.shields.io/nuget/v/BMLogger"></a>
-<a href="https://github.com/AnemonOFF/BMLogger/LICENSE"><img alt="GitHub" src="https://img.shields.io/github/license/AnemonOFF/BMLogger"></a>
+<a href="https://github.com/AnemonOFF/BMLogger/blob/main/LICENSE"><img alt="GitHub" src="https://img.shields.io/github/license/AnemonOFF/BMLogger"></a>
 </p>
 </br>
 
