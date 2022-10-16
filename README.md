@@ -10,29 +10,46 @@
 
 A simple C# file and console **logger** with log level separate.
 
+## BMLogger 2 UPDATE
+1. **Added flexable console log level setting**
+- **LogAll** - log all messages in console
+- **LogWarnsAndHigher** - log only WARN, ERROR and FATAL messages in console
+- **LogErrorsAndHigher** - log only ERROR and FATAL messages in console
+- **LogFatals** - log only FATAL messages in console
+- **LogSuccess** - log only SUCCESS messages in console
+- **LogSuccessAndInfos** - log only SUCCESS and INFO messages in console
+- **LogSuccessWarnsAndHigher** - log only SUCCESS, WARN, ERROR and FATAL messages in console
+- **LogSuccessErrorsAndHigher** - log only SUCCESS, ERROR, FATAL messages in console
+- **LogSuccessFatals** - log only SUCCESS and FATALS messages in console
+- **LogNothing** - do not log anything in console
+
+2. **By default provider creating "default" logger on init**
+You can get it by provider.GetLogger("default") or provider["default"].
+
 ## How to use
 
  1. Firstly **create log provider**
 ```c#
 var provider = new BMLoggerProvider();
 ```
-| Agrument        | type     | required | default  | description                                      |
-|-----------------|----------|----------|----------|--------------------------------------------------|
-| dir             | string   | -        | bmlogger | path to directory of logs                        |
-| expiration      | TimeSpan | -        | 30 days  | time from last log in file. If greater - delete  |
-| maxFileSizeInMb | int      | -        | 20 Mb    | max file size on provider init. If greater - cut |
-| logInConsole    | bool     | -        | true     | flag to log in console                           |
- 2.  Create logger by provider. **DO NOT** create it by yourself (using new BMLogger().
+| Agrument        | type        | required | default  | description                                      |
+|-----------------|-------------|----------|----------|--------------------------------------------------|
+| dir             | string      | -        | bmlogger | path to directory of logs                        |
+| expiration      | TimeSpan    | -        | 30 days  | time from last log in file. If greater - delete  |
+| maxFileSizeInMb | int         | -        | 20 Mb    | max file size on provider init. If greater - cut |
+| logInConsole    | ConsoleLogs | -        | LogAll   | which messages should be logged in console       |
+ 2.  Create logger by provider. **DO NOT** create it by yourself (using new BMLogger()).
  
 ```c#
 var logger = provider.CreateLogger("name");
 ````
-| Agrument        | type   | required | default | description                                                    |
-|-----------------|--------|----------|---------|----------------------------------------------------------------|
-| name            | string | +        |         | name of logger and its file                                    |
-| logDateTime     | bool   | -        | true    | flag to log date and time of message                           |
-| logCallerPath   | bool   | -        | true    | flag to log path to file from where log function was called    |
-| logCallerMember | bool   | -        | true    | flag to log method and line from where log function was called |
+| Agrument        | type         | required | default          | description                                                    |
+|-----------------|--------------|----------|------------------|----------------------------------------------------------------|
+| name            | string       | +        |                  | name of logger and its file                                    |
+| logDateTime     | bool         | -        | true             | flag to log date and time of message                           |
+| logCallerPath   | bool         | -        | true             | flag to log path to file from where log function was called    |
+| logCallerMember | bool         | -        | true             | flag to log method and line from where log function was called |
+| logInConsole    | ConsoleLogs? | -        | Provider`s value | which messages should be logged in console                     |
 3. **Log** your message
 ```c#
 // Use default method with any LogLevel

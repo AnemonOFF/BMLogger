@@ -3,15 +3,6 @@ using System.Text;
 
 namespace BMLogger;
 
-public enum LogLevel
-{
-    INFO,
-    SUCCESS,
-    WARN,
-    ERROR,
-    FATAL
-}
-
 public class BMLogger : IDisposable
 {
     private readonly string _dir;
@@ -20,7 +11,7 @@ public class BMLogger : IDisposable
     private readonly bool _logDateTime;
     private readonly bool _logCallerPath;
     private readonly bool _logCallerMember;
-    private readonly bool _logInConsole;
+    private readonly ConsoleLogs _logInConsole;
     private readonly StreamWriter _stream;
     private readonly object _lock = new();
 
@@ -30,7 +21,7 @@ public class BMLogger : IDisposable
         string name,
         string dir,
         int maxFileSizeInMb = 5,
-        bool logInConsole = true,
+        ConsoleLogs logInConsole = ConsoleLogs.LogAll,
         bool logDateTime = true,
         bool logCallerPath = true,
         bool logCallerMember = true
@@ -51,6 +42,14 @@ public class BMLogger : IDisposable
         Dispose();
     }
 
+    /// <summary>
+    /// Log your message with logLevel
+    /// </summary>
+    /// <param name="message">string message</param>
+    /// <param name="logLevel">log level of your message</param>
+    /// <param name="callerPath">path from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <param name="callerMember">method from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <param name="callerLine">line from where this method was called. Set this arg only if you are making your own log function.</param>
     public void Log(string message, LogLevel logLevel = LogLevel.INFO, [CallerFilePath] string callerPath = "", [CallerMemberName] string callerMember = "", [CallerLineNumber] int callerLine = 0)
     {
         var messageBuilder = new StringBuilder();
@@ -70,59 +69,185 @@ public class BMLogger : IDisposable
         var resultMessage = messageBuilder.ToString();
         lock (_lock)
         {
-            if (_logInConsole)
+            var consoleColors = GetConsoleColors(logLevel);
+            switch (_logInConsole)
             {
-                WriteConsoleColoredLine(
-                    resultMessage,
-                    logLevel == LogLevel.SUCCESS ? ConsoleColor.Green : logLevel == LogLevel.WARN ? ConsoleColor.DarkYellow : logLevel == LogLevel.ERROR ? ConsoleColor.DarkRed : null,
-                    logLevel == LogLevel.FATAL ? ConsoleColor.Red : null
-                    );
+                case ConsoleLogs.LogAll:
+                    WriteConsoleColoredLine(resultMessage, consoleColors.foreground, consoleColors.background);
+                    break;
+                case ConsoleLogs.LogWarnsAndHigher:
+                    if(logLevel >= LogLevel.WARN)
+                        WriteConsoleColoredLine(resultMessage, consoleColors.foreground, consoleColors.background);
+                    break;
+                case ConsoleLogs.LogErrorsAndHigher:
+                    if (logLevel >= LogLevel.ERROR)
+                        WriteConsoleColoredLine(resultMessage, consoleColors.foreground, consoleColors.background);
+                    break;
+                case ConsoleLogs.LogFatals:
+                    if (logLevel == LogLevel.FATAL)
+                        WriteConsoleColoredLine(resultMessage, consoleColors.foreground, consoleColors.background);
+                    break;
+                case ConsoleLogs.LogSuccess:
+                    if (logLevel == LogLevel.SUCCESS)
+                        WriteConsoleColoredLine(resultMessage, consoleColors.foreground, consoleColors.background);
+                    break;
+                case ConsoleLogs.LogSuccessAndInfos:
+                    if (logLevel == LogLevel.SUCCESS || logLevel == LogLevel.INFO)
+                        WriteConsoleColoredLine(resultMessage, consoleColors.foreground, consoleColors.background);
+                    break;
+                case ConsoleLogs.LogSuccessWarnsAndHigher:
+                    if (logLevel == LogLevel.SUCCESS || logLevel >= LogLevel.WARN)
+                        WriteConsoleColoredLine(resultMessage, consoleColors.foreground, consoleColors.background);
+                    break;
+                case ConsoleLogs.LogSuccessErrorsAndHigher:
+                    if (logLevel == LogLevel.SUCCESS || logLevel >= LogLevel.ERROR)
+                        WriteConsoleColoredLine(resultMessage, consoleColors.foreground, consoleColors.background);
+                    break;
+                case ConsoleLogs.LogSuccessFatals:
+                    if (logLevel == LogLevel.SUCCESS || logLevel == LogLevel.FATAL)
+                        WriteConsoleColoredLine(resultMessage, consoleColors.foreground, consoleColors.background);
+                    break;
+                case ConsoleLogs.LogNothing:
+                    break;
             }
             _stream.WriteLine(resultMessage);
         }
     }
 
-    private static void WriteConsoleColoredLine(string message, ConsoleColor? foreground = null, ConsoleColor? background = null)
+    private static (ConsoleColor foreground, ConsoleColor background) GetConsoleColors(LogLevel logLevel)
     {
-        if(background != null)
-            Console.BackgroundColor = background.Value;
-        if(foreground != null)
-            Console.ForegroundColor = foreground.Value;
-        Console.WriteLine(message);
-        if(background != null || foreground != null)
-            Console.ResetColor();
+        var fg = logLevel == LogLevel.SUCCESS ? ConsoleColor.Green :
+            logLevel == LogLevel.WARN ? ConsoleColor.DarkYellow :
+            logLevel == LogLevel.ERROR ? ConsoleColor.DarkRed :
+            BMLoggerProvider.ConsoleDefaultForeground;
+
+        var bg = logLevel == LogLevel.FATAL ? ConsoleColor.Red : BMLoggerProvider.ConsoleDefaultBackground;
+
+        return (fg, bg);
     }
 
+    private static void WriteConsoleColoredLine(string message, ConsoleColor foreground, ConsoleColor background)
+    {
+        Console.BackgroundColor = background;
+        Console.ForegroundColor = foreground;
+        Console.WriteLine(message);
+        Console.BackgroundColor = BMLoggerProvider.ConsoleDefaultBackground;
+        Console.ForegroundColor = BMLoggerProvider.ConsoleDefaultForeground;
+    }
+
+    /// <summary>
+    /// Async implementation of Log method. Log your message with logLevel
+    /// </summary>
+    /// <param name="message">string message</param>
+    /// <param name="logLevel">log level of your message</param>
+    /// <param name="callerPath">path from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <param name="callerMember">method from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <param name="callerLine">line from where this method was called. Set this arg only if you are making your own log function.</param>
     public async Task LogAsync(string message, LogLevel logLevel = LogLevel.INFO, [CallerFilePath] string callerPath = "", [CallerMemberName] string callerMember = "", [CallerLineNumber] int callerLine = 0)
         => await Task.Run(() => Log(message, logLevel, callerPath, callerMember, callerLine));
 
+    /// <summary>
+    /// Shortcut for Log with INFO log level. Log your message with INFO log level.
+    /// </summary>
+    /// <param name="message">string message</param>
+    /// <param name="callerPath">path from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <param name="callerMember">method from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <param name="callerLine">line from where this method was called. Set this arg only if you are making your own log function.</param>
     public void Info(string message, [CallerFilePath] string callerPath = "", [CallerMemberName] string callerMember = "", [CallerLineNumber] int callerLine = 0)
         => Log(message, LogLevel.INFO, callerPath, callerMember, callerLine);
 
+    /// <summary>
+    /// Shortcut for Log with SUCCESS log level. Log your message with SUCCESS log level.
+    /// </summary>
+    /// <param name="message">string message</param>
+    /// <param name="callerPath">path from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <param name="callerMember">method from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <param name="callerLine">line from where this method was called. Set this arg only if you are making your own log function.</param>
     public void Success(string message, [CallerFilePath] string callerPath = "", [CallerMemberName] string callerMember = "", [CallerLineNumber] int callerLine = 0)
         => Log(message, LogLevel.SUCCESS, callerPath, callerMember, callerLine);
 
+    /// <summary>
+    /// Shortcut for Log with WARN log level. Log your message with WARN log level.
+    /// </summary>
+    /// <param name="message">string message</param>
+    /// <param name="callerPath">path from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <param name="callerMember">method from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <param name="callerLine">line from where this method was called. Set this arg only if you are making your own log function.</param>
     public void Warn(string message, [CallerFilePath] string callerPath = "", [CallerMemberName] string callerMember = "", [CallerLineNumber] int callerLine = 0)
         => Log(message, LogLevel.WARN, callerPath, callerMember, callerLine);
 
+    /// <summary>
+    /// Shortcut for Log with ERROR log level. Log your message with ERROR log level.
+    /// </summary>
+    /// <param name="message">string message</param>
+    /// <param name="callerPath">path from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <param name="callerMember">method from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <param name="callerLine">line from where this method was called. Set this arg only if you are making your own log function.</param>
     public void Error(string message, [CallerFilePath] string callerPath = "", [CallerMemberName] string callerMember = "", [CallerLineNumber] int callerLine = 0)
         => Log(message, LogLevel.ERROR, callerPath, callerMember, callerLine);
 
+    /// <summary>
+    /// Shortcut for Log with FATAL log level. Log your message with FATAL log level.
+    /// </summary>
+    /// <param name="message">string message</param>
+    /// <param name="callerPath">path from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <param name="callerMember">method from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <param name="callerLine">line from where this method was called. Set this arg only if you are making your own log function.</param>
     public void Fatal(string message, [CallerFilePath] string callerPath = "", [CallerMemberName] string callerMember = "", [CallerLineNumber] int callerLine = 0)
         => Log(message, LogLevel.FATAL, callerPath, callerMember, callerLine);
 
+    /// <summary>
+    /// Shortcut for LogAsync with INFO log level. Log your message with INFO log level.
+    /// </summary>
+    /// <param name="message">string message</param>
+    /// <param name="callerPath">path from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <param name="callerMember">method from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <param name="callerLine">line from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <returns></returns>
     public async Task InfoAsync(string message, [CallerFilePath] string callerPath = "", [CallerMemberName] string callerMember = "", [CallerLineNumber] int callerLine = 0)
         => await LogAsync(message, LogLevel.INFO, callerPath, callerMember, callerLine);
 
+    /// <summary>
+    /// Shortcut for LogAsync with WARN log level. Log your message with WARN log level.
+    /// </summary>
+    /// <param name="message">string message</param>
+    /// <param name="callerPath">path from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <param name="callerMember">method from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <param name="callerLine">line from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <returns></returns>
     public async Task WarnAsync(string message, [CallerFilePath] string callerPath = "", [CallerMemberName] string callerMember = "", [CallerLineNumber] int callerLine = 0)
         => await LogAsync(message, LogLevel.WARN, callerPath, callerMember, callerLine);
 
+    /// <summary>
+    /// Shortcut for LogAsync with ERROR log level. Log your message with ERROR log level.
+    /// </summary>
+    /// <param name="message">string message</param>
+    /// <param name="callerPath">path from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <param name="callerMember">method from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <param name="callerLine">line from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <returns></returns>
     public async Task ErrorAsync(string message, [CallerFilePath] string callerPath = "", [CallerMemberName] string callerMember = "", [CallerLineNumber] int callerLine = 0)
         => await LogAsync(message, LogLevel.ERROR, callerPath, callerMember, callerLine);
 
+    /// <summary>
+    /// Shortcut for LogAsync with FATAL log level. Log your message with FATAL log level.
+    /// </summary>
+    /// <param name="message">string message</param>
+    /// <param name="callerPath">path from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <param name="callerMember">method from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <param name="callerLine">line from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <returns></returns>
     public async Task FatalAsync(string message, [CallerFilePath] string callerPath = "", [CallerMemberName] string callerMember = "", [CallerLineNumber] int callerLine = 0)
         => await LogAsync(message, LogLevel.FATAL, callerPath, callerMember, callerLine);
 
+    /// <summary>
+    /// Shortcut for LogAsync with SUCCESS log level. Log your message with SUCCESS log level.
+    /// </summary>
+    /// <param name="message">string message</param>
+    /// <param name="callerPath">path from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <param name="callerMember">method from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <param name="callerLine">line from where this method was called. Set this arg only if you are making your own log function.</param>
+    /// <returns></returns>
     public async Task SuccessAsync(string message, [CallerFilePath] string callerPath = "", [CallerMemberName] string callerMember = "", [CallerLineNumber] int callerLine = 0)
         => await LogAsync(message, LogLevel.SUCCESS, callerPath, callerMember, callerLine);
 
