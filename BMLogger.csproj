@@ -6,7 +6,7 @@
     <Nullable>enable</Nullable>
     <Authors>Anemon</Authors>
     <Description>A simple C# file and console logger with log level separate.</Description>
-    <Copyright>Anemon</Copyright>
+    <Copyright>Copyright © Anemon 2022</Copyright>
     <PackageReadmeFile>README.md</PackageReadmeFile>
     <PackageIcon>logo.png</PackageIcon>
     <RepositoryUrl>https://github.com/AnemonOFF/BMLogger/</RepositoryUrl>
